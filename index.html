@@ -100,6 +100,10 @@ h1 i { color: var(--oj); }
 .deal:focus-visible { outline: 2px solid var(--oat); outline-offset: 3px; }
 .dealt { font-family: var(--mono); color: var(--oj); margin-top: 14px; }
 
+.hello { width: min(440px, calc(100vw - 32px)); padding: 24px; background: var(--crema); color: var(--oat); border: 1px solid var(--rule); border-radius: 12px; }
+.hello::backdrop { background: rgba(21, 17, 31, .8); }
+.hello p { margin: 0 0 16px; font-size: 17px; }
+
 .reveal { animation: rise .6s ease-out both; }
 @keyframes rise { from { opacity: .2; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .reveal, .shake { animation: none; } .cell input { transition: none; } }
@@ -110,7 +114,7 @@ h1 i { color: var(--oj); }
   <header>
     <div class="stage" id="stage">stage <b>1</b> of 3 · the crossword</div>
     <h1>a <i>connection</i></h1>
-    <p class="intro">Five words, two codes, and then something I've been meaning to say. You already know every answer.</p>
+    <p class="intro">Let's see if you can crack this and get the message, Adam! Best of Luck! (Do not dig in the repo, or try to unethically solve this, nfik bik. Nothing is public.)</p>
   </header>
 
   <section class="board"><div class="grid" id="grid" aria-label="Crossword"></div></section>
@@ -118,7 +122,7 @@ h1 i { color: var(--oj); }
   <section class="clues">
     <div><h2>Across</h2><ol id="across"></ol></div>
     <div><h2>Down</h2><ol id="down"></ol></div>
-    <div class="progress"><strong id="solvedCount">0</strong>/5 words</div>
+    <div class="progress"><strong id="solvedCount">0</strong>/6 words</div>
   </section>
 
   <section class="codes" id="codes" hidden>
@@ -133,8 +137,13 @@ h1 i { color: var(--oj); }
   </section>
 </main>
 
+<dialog class="hello reveal" id="hello" aria-label="Message" aria-describedby="hello-text">
+  <p id="hello-text">Goood morning! I do not have a way to explain the creative flow elli got in my head at 1am, tho I am "on holidayyys" (read it with your tone),  ema I couldn't think of a better way to use tokens, take it as the greatest of compliments haha. It's a little game, customized cross-words! Goodluck in your exaaam &amp; enjoy your morning coffee ( tho I am not there ) &lt;33 We are freeee! </p>
+  <form method="dialog"><button class="deal" type="submit">start</button></form>
+</dialog>
+
 <script>
-const DATA = {"W":6,"H":18,"salt":"a-connection:","entries":[{"n":2,"r":3,"c":2,"d":"down","len":15,"clue":"What do you call someone flexible?","en":"(7,8)","h":"4f2bd0c5b707263c9d1785d4483a0b4aa4cfa01e38ae4d88cd29756edcd41d83"},{"n":3,"r":4,"c":0,"d":"across","len":6,"clue":"We use it every day, it carried us through exams, and it bonded us since we both obsess over it. But mine is better.","en":"(6)","h":"f6278243bbcb43c3e9b10998c3f46441bccb7a58fd893b849cf5f15802c8b405"},{"n":1,"r":0,"c":5,"d":"down","len":13,"clue":"A song that started it all","en":"(7,2,4)","h":"cf9abc426ad96c928bfdaaf7e0ad818d636a3869f9dcd5bc138da8c0957b06e2"},{"n":3,"r":4,"c":0,"d":"down","len":6,"clue":"Something we consume every day to stay sane","en":"(6)","h":"e7c3bd9fe0bf2ced3eb174fa23c266c1593cfb8f7eb413db522b9cd96a71a6b8"},{"n":4,"r":14,"c":1,"d":"across","len":5,"clue":"We have it on two apps: a collaboration, an exchange","en":"(5)","h":"41f164f177f35bef865e8537d5887dac033d5edfdbf5a3dc99e1e2eed4c1376e"}],"codes":[{"label":"My laptop's password. You figured it out from a song.","len":4,"h":"c30cad1fd2232a8dcdef68afe16f3b6da7c4c7024774edcb49cf8da67a88b63f"},{"label":"Your name, dialed on an old phone keypad.","len":4,"h":"4339791d397c52513fe1f81211b9a5cb2abb3c7d88d2db3fd1139cd1a635c07a"}],"order":"sorted entries then codes","iv":"1iaUM0h2glZ7R7CY","ct":"EVLMEcjgDuVkauYc3noQO+8g3ASB2t0BIaU20r7su13sVA9+wxCuCRq9mBo4PhtgOKQL62T9qL/CxHXeorSS+sLtNnSqrkSgVZe2sKdibiMD3oiZESa3qG1S0f6pxB+IOtwfLQSyxYd1/HXvPhl5iIiyBLTGKt1dURgcKMBTJpVTuLHaatBbkZjVicQYVVIx9zaUaipDQXOPzmInuNCHsEdBKktearKGxiACJy2780mvG1vaPcoQZAJg2C4QHysoUTKGjwOY5ip175QTG8PWSq/M/QZ+9chYHgyzlzdCRbwGVkM50L6/t+0BQx6poog5xnu4ES0bpiWpH10x9K2s5v8R1Tm0Sh9TUefbB3eKIjSv8lT/1TOExYCLQJrd9NaooA8cUg28OEtJ92nWuf9GJ1Buq5XajCZg1fdkvRaF/+ZALk8pdcqXQG9ycGKgwD5VjNTueQ1MSIAy+8fDc1Ll7NcSad2Kb8MiJ7EpHu7iEJGEIUkhxjK0mceWSm4bP6c30OZOkgnt/daumErfTOnHYLmaL+QjLnKNol6unFvAFqVimnPvV7BxUuAZLpuT8+IlI8uYTIx82haHfoNbNgxPToa4XW+TaJwLHHGuGLg="};
+const DATA = {"W":6,"H":20,"salt":"a-connection:","entries":[{"n":2,"r":3,"c":2,"d":"down","len":15,"clue":"What do you call someone flexible?","en":"(7,8)","h":"4f2bd0c5b707263c9d1785d4483a0b4aa4cfa01e38ae4d88cd29756edcd41d83"},{"n":3,"r":4,"c":0,"d":"across","len":6,"clue":"We use it every day, it carried us through exams, and it bonded us since we both obsess over it. But mine is better.","en":"(6)","h":"f6278243bbcb43c3e9b10998c3f46441bccb7a58fd893b849cf5f15802c8b405"},{"n":1,"r":0,"c":5,"d":"down","len":13,"clue":"A song that started it all","en":"(7,2,4)","h":"cf9abc426ad96c928bfdaaf7e0ad818d636a3869f9dcd5bc138da8c0957b06e2"},{"n":3,"r":4,"c":0,"d":"down","len":6,"clue":"Something we consume every day to stay sane","en":"(6)","h":"e7c3bd9fe0bf2ced3eb174fa23c266c1593cfb8f7eb413db522b9cd96a71a6b8"},{"n":4,"r":14,"c":1,"d":"across","len":5,"clue":"We have it on two apps: a collaboration, an exchange","en":"(5)","h":"41f164f177f35bef865e8537d5887dac033d5edfdbf5a3dc99e1e2eed4c1376e"},{"n":5,"r":19,"c":0,"d":"across","len":6,"clue":"One of Michael Jackson's songs, GL5 theme","en":"(4,2)","h":"a6294dc7d047687368f8b539edac94df543c937fa40576d15e1f969bcde44c94","extra":true}],"codes":[{"label":"My laptop's password. You figured it out from a song.","len":4,"h":"c30cad1fd2232a8dcdef68afe16f3b6da7c4c7024774edcb49cf8da67a88b63f"},{"label":"Your name, dialed on an old phone keypad.","len":4,"h":"4339791d397c52513fe1f81211b9a5cb2abb3c7d88d2db3fd1139cd1a635c07a"}],"order":"sorted entries then codes","iv":"1iaUM0h2glZ7R7CY","ct":"EVLMEcjgDuVkauYc3noQO+8g3ASB2t0BIaU20r7su13sVA9+wxCuCRq9mBo4PhtgOKQL62T9qL/CxHXeorSS+sLtNnSqrkSgVZe2sKdibiMD3oiZESa3qG1S0f6pxB+IOtwfLQSyxYd1/HXvPhl5iIiyBLTGKt1dURgcKMBTJpVTuLHaatBbkZjVicQYVVIx9zaUaipDQXOPzmInuNCHsEdBKktearKGxiACJy2780mvG1vaPcoQZAJg2C4QHysoUTKGjwOY5ip175QTG8PWSq/M/QZ+9chYHgyzlzdCRbwGVkM50L6/t+0BQx6poog5xnu4ES0bpiWpH10x9K2s5v8R1Tm0Sh9TUefbB3eKIjSv8lT/1TOExYCLQJrd9NaooA8cUg28OEtJ92nWuf9GJ1Buq5XajCZg1fdkvRaF/+ZALk8pdcqXQG9ycGKgwD5VjNTueQ1MSIAy+8fDc1Ll7NcSad2Kb8MiJ7EpHu7iEJGEIUkhxjK0mceWSm4bP6c30OZOkgnt/daumErfTOnHYLmaL+QjLnKNol6unFvAFqVimnPvV7BxUuAZLpuT8+IlI8uYTIx82haHfoNbNgxPToa4XW+TaJwLHHGuGLg="};
 const enc = new TextEncoder();
 async function sha(s) {
   const b = await crypto.subtle.digest("SHA-256", enc.encode(s));
@@ -252,7 +261,8 @@ function openCodes() {
 
 function b64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
 async function unlock() {
-  const words = [...entries].sort((a, b) => a.n - b.n || (a.d < b.d ? -1 : 1)).map(e => solvedWords[e.id]);
+  // The letter is encrypted with the original five words, so extra words stay out of the key.
+  const words = [...entries].filter(e => !e.extra).sort((a, b) => a.n - b.n || (a.d < b.d ? -1 : 1)).map(e => solvedWords[e.id]);
   const keyRaw = await crypto.subtle.digest("SHA-256", enc.encode(DATA.salt + words.concat(codeVals).join("|")));
   const key = await crypto.subtle.importKey("raw", keyRaw, "AES-GCM", false, ["decrypt"]);
   const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(DATA.iv) }, key, b64(DATA.ct));
@@ -262,6 +272,7 @@ async function unlock() {
   l.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 document.getElementById("deal").addEventListener("click", () => { document.getElementById("dealt").hidden = false; });
+document.getElementById("hello").showModal();
 </script>
 </body>
 </html>
