@@ -25,6 +25,8 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+/* .codes and .letter set their own display, so hidden has to win over it. */
+[hidden] { display: none !important; }
 html, body { margin: 0; background: var(--roast); color: var(--oat); }
 body {
   font-family: var(--sans); font-size: 16px; line-height: 1.5;
