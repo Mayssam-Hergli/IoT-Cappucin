@@ -13,3 +13,9 @@ a-connection/
 .venv/
 .~lock.*#
 *.joblib
+
+# Mayssam: firmware / tools / ml
+firmware/**/secrets.h
+build/
+**/build/
+__pycache__/
