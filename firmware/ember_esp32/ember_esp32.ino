@@ -15,7 +15,7 @@
 #define HAS_LDR         0     // LDR not fitted -> light_delta = flicker = 0
 #define HAS_IR          0     // IR obstacle = anti-masking (tamper). Removed for now.
 #define HAS_DHT         0     // DHT11 not fitted for now -> temp_slope = 0, no "dht" fault
-#define BUZZER_PASSIVE  1     // 1 = passive (tones), 0 = active (on/off) — set from hw_test
+#define BUZZER_PASSIVE  0     // hw_test: sounds on tone AND on DC -> ACTIVE buzzer
 #define FORCE_RULES     0     // 1 = ignore model.h and use the fallback rules
 #define SERIAL_CMDS     1     // dev only: type reset/silence/valve_open/valve_close on Serial. Set 0 for the demo.
 #define PRINT_JSON      0     // 1 = print the payload JSON on Serial (debug)

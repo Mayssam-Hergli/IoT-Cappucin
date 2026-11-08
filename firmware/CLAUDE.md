@@ -228,3 +228,4 @@ Reply: `{"ok": true}` (plain JSON).
 - Code must compile on ESP32 core 2.x AND 3.x (`#if ESP_ARDUINO_VERSION_MAJOR >= 3` for the LEDC API).
 - GPIO 13, 32, 34, 35 unused.
 - Training labels (no LDR): `normal`, `handheat` -> normal; `gas` -> leak; `fire` -> fire.
+- hw_test results (2026-11-08): LEDs OK; buzzer is ACTIVE (`BUZZER_PASSIVE 0`); gas reads ~1800-1930 in clean air when wired; DHT11 and IR not used for now (`HAS_DHT 0`, `HAS_IR 0`); MG996R on VIN drops the USB when it moves -> firmware moves it in 3° steps.
