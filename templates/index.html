@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EMBER dashboard</title>
+<style>
+  :root { --bg:#111317; --card:#1c2027; --line:#2c323c; --txt:#eef0f3; --dim:#9aa3ad;
+          --green:#22c55e; --yellow:#facc15; --red:#ef4444; --grey:#6b7280; --blue:#60a5fa; --orange:#ff6b35; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:"Segoe UI", system-ui, sans-serif; font-size:15px; }
+  header { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header h1 { margin:0; font-size:22px; letter-spacing:3px; color:var(--orange); }
+  header .sp { flex:1; }
+  header .who { color:var(--dim); font-size:14px; }
+  a { color:var(--blue); }
+  button { font:inherit; cursor:pointer; border-radius:8px; border:1px solid var(--line); background:#262b34; color:var(--txt); padding:8px 14px; }
+  button:hover { background:#303643; }
+  main { padding:16px; max-width:1300px; margin:0 auto; display:grid; gap:14px; grid-template-columns:repeat(12, 1fr); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; min-width:0; }
+  .card h2 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim); font-weight:600; }
+  .c12 { grid-column:span 12; } .c8 { grid-column:span 8; } .c6 { grid-column:span 6; } .c4 { grid-column:span 4; }
+  @media (max-width: 900px) { .c8, .c6, .c4 { grid-column:span 12; } }
+
+  #sim { display:none; grid-column:span 12; text-align:center; font-weight:800; letter-spacing:4px; padding:8px; border-radius:10px;
+         color:#111; background:repeating-linear-gradient(45deg, #fbbf24 0 18px, #f59e0b 18px 36px); }
+  #banner { grid-column:span 12; border-radius:14px; padding:22px 20px; text-align:center; transition:background .3s; background:var(--grey); }
+  #banner .st { font-size:clamp(40px, 8vw, 84px); font-weight:900; letter-spacing:4px; line-height:1; }
+  #banner .cause { font-size:clamp(18px, 3vw, 28px); font-weight:700; margin-top:8px; }
+  #banner .conf { display:none; margin-top:10px; font-weight:800; letter-spacing:2px; background:rgba(0,0,0,.25); display:inline-block; padding:4px 12px; border-radius:6px; }
+  #banner.NORMAL { background:var(--green); color:#062b14; }
+  #banner.WARNING { background:var(--yellow); color:#2b2300; }
+  #banner.ALARM { background:var(--red); color:#fff; animation:pulse 1s infinite; }
+  #banner.OFFLINE { background:var(--grey); color:#fff; }
+  @keyframes pulse { 50% { filter:brightness(1.25); } }
+
+  .vals { display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:10px; }
+  .val { background:#14171c; border-radius:10px; padding:10px; }
+  .val .k { color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:1px; }
+  .val .v { font-size:26px; font-weight:700; margin-top:2px; font-variant-numeric:tabular-nums; }
+  .val .u { font-size:13px; color:var(--dim); font-weight:400; }
+
+  .bar { display:grid; grid-template-columns:110px 1fr 52px; align-items:center; gap:8px; margin:6px 0; font-size:14px; }
+  .bar .track { height:14px; background:#14171c; border-radius:7px; overflow:hidden; }
+  .bar .fill { height:100%; width:0; border-radius:7px; transition:width .3s; }
+  .bar .num { text-align:right; font-variant-numeric:tabular-nums; color:var(--dim); }
+
+  #cam { width:100%; aspect-ratio:4/3; background:#0b0d10; border-radius:8px; object-fit:contain; display:block; }
+  #camNone { aspect-ratio:4/3; display:grid; place-items:center; color:var(--dim); background:#0b0d10; border-radius:8px; }
+  .camrow { display:flex; justify-content:space-between; margin-top:8px; font-size:14px; }
+
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { padding:6px 12px; border-radius:999px; font-size:13px; font-weight:600; background:#14171c; border:1px solid var(--line); }
+  .chip.ok { border-color:var(--green); color:var(--green); }
+  .chip.warn { border-color:var(--yellow); color:var(--yellow); }
+  .chip.bad { border-color:var(--red); color:#fff; background:var(--red); }
+  .chip.info { border-color:var(--blue); color:var(--blue); }
+
+  .cmp { display:grid; gap:8px; }
+  .cmp div { display:flex; justify-content:space-between; gap:10px; padding:10px; border-radius:8px; background:#14171c; }
+  .cmp b.y { color:var(--red); } .cmp b.n { color:var(--green); }
+
+  .cmds { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .cmds button { padding:14px; font-weight:700; }
+  .cmds button.locked { opacity:.45; }
+  #cmdMsg { margin-top:10px; min-height:20px; font-size:14px; color:var(--dim); }
+
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  td { padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.t { color:var(--dim); white-space:nowrap; font-variant-numeric:tabular-nums; width:90px; }
+  td.ty { font-weight:700; white-space:nowrap; }
+  .evwrap { max-height:340px; overflow:auto; }
+  .r { color:var(--red); } .y { color:var(--yellow); } .g { color:var(--green); } .b { color:var(--blue); }
+</style>
+</head>
+<body>
+<header>
+  <h1>EMBER</h1>
+  <span class="who">Room 1 · signed in as <b>{{ user }}</b> ({{ role }})</span>
+  <span class="sp"></span>
+  <button id="voiceBtn">🔈 Enable voice</button>
+  <a href="/logout">Log out</a>
+</header>
+
+<main>
+  <div id="sim">SIMULATION · DATA FROM fake_esp32.py, NOT THE REAL BOARD</div>
+
+  <div id="banner" class="OFFLINE">
+    <div class="st" id="stTxt">WAITING</div>
+    <div class="cause" id="causeTxt">No data from the board yet</div>
+    <div class="conf" id="confTxt" style="display:none">🔥 VISUALLY CONFIRMED BY CAMERA</div>
+  </div>
+
+  <section class="card c8">
+    <h2>Live sensors</h2>
+    <div class="vals">
+      <div class="val"><div class="k">Gas</div><div class="v" id="vGas">–</div></div>
+      <div class="val"><div class="k">Temperature</div><div class="v"><span id="vTemp">–</span><span class="u"> °C</span></div></div>
+      <div class="val"><div class="k">Humidity</div><div class="v"><span id="vHum">–</span><span class="u"> %</span></div></div>
+      <div class="val"><div class="k">Light</div><div class="v" id="vLdr">–</div></div>
+      <div class="val"><div class="k">Flicker</div><div class="v" id="vFlk">–</div></div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:18px; margin-top:14px">
+      <div>
+        <h2>AI model: what it thinks</h2>
+        <div id="probs"></div>
+      </div>
+      <div>
+        <h2 id="whyTitle">Why (feature contribution)</h2>
+        <div id="why"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card c4">
+    <h2>Camera (flame model)</h2>
+    <img id="cam" alt="camera frame" style="display:none">
+    <div id="camNone">Camera not connected</div>
+    <div class="camrow"><span>Flame score <b id="cvScore">–</b></span><span>Flame: <b id="cvFlame">–</b></span><span id="cvFps" style="color:var(--dim)"></span></div>
+  </section>
+
+  <section class="card c6">
+    <h2>Status</h2>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="card c6">
+    <h2>Why AI? Same data, three detectors</h2>
+    <div class="cmp">
+      <div><span>Simple threshold rule</span><b id="cmpRule">–</b></div>
+      <div><span>Classic 57 °C heat detector</span><b id="cmpHeat">–</b></div>
+      <div><span>EMBER (AI model)</span><b id="cmpEmber">–</b></div>
+    </div>
+  </section>
+
+  <section class="card c4">
+    <h2>Commands {% if role != 'admin' %}<span class="r">(view only)</span>{% endif %}</h2>
+    <div class="cmds">
+      <button data-cmd="reset">⟲ Reset alarm</button>
+      <button data-cmd="silence">🔕 Silence 60 s</button>
+      <button data-cmd="valve_open">Valve OPEN</button>
+      <button data-cmd="valve_close">Valve CLOSE</button>
+    </div>
+    <div id="cmdMsg"></div>
+  </section>
+
+  <section class="card c8">
+    <h2>Event log (audit trail)</h2>
+    <div class="evwrap"><table><tbody id="events"></tbody></table></div>
+  </section>
+</main>
+
+<script>
+const ROLE = {{ role|tojson }};
+const $ = id => document.getElementById(id);
+const fmt = t => new Date(t * 1000).toLocaleTimeString([], {hour12:false});
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = (v, d=0) => (v === null || v === undefined) ? "–" : Number(v).toFixed(d);
+
+// ---------- commands
+if (ROLE !== "admin") document.querySelectorAll(".cmds button").forEach(b => { b.classList.add("locked"); b.title = "Admin only"; });
+document.querySelectorAll(".cmds button").forEach(b => b.onclick = async () => {
+  const r = await fetch("/api/command", {method:"POST", headers:{"Content-Type":"application/json"},
+                                          body: JSON.stringify({cmd: b.dataset.cmd})});
+  const j = await r.json().catch(() => ({}));
+  $("cmdMsg").innerHTML = r.ok ? `<span class="g">Sent ${esc(b.dataset.cmd)} (id ${j.id}). Waiting for the board…</span>`
+                               : `<span class="r">DENIED: ${esc(j.error || r.status)}</span>`;
+  poll();
+});
+
+// ---------- voice
+let voiceOn = false;
+$("voiceBtn").onclick = () => {
+  voiceOn = !voiceOn;
+  $("voiceBtn").textContent = voiceOn ? "🔊 Voice on" : "🔈 Enable voice";
+  if (voiceOn) say("Voice alerts enabled.");
+};
+function say(text) {
+  if (!voiceOn || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = "en-US"; u.rate = 0.95;
+  speechSynthesis.speak(u);
+}
+let lastKey = null;
+function voiceFor(online, r) {
+  const key = !online ? "offline" : `${r.state}/${r.cause}`;
+  if (key === lastKey) return;
+  const first = lastKey === null; lastKey = key;
+  if (first) return;
+  if (!online) return say("Warning. The detector is offline.");
+  if (r.state === "ALARM" && r.cause === "fire") return say("Fire alarm. Evacuate by the main door.");
+  if (r.state === "ALARM") return say("Gas alarm. Gas valve closed. Leave the kitchen and do not use switches.");
+  if (r.state === "WARNING" && r.cause === "gas_leak") return say("Gas leak in the kitchen. Gas valve closed.");
+  if (r.state === "WARNING") return say("Warning. Possible fire in the kitchen.");
+  if (r.state === "NORMAL") return say("All clear.");
+}
+
+// ---------- bars
+function bars(el, obj, labels, colorFn) {
+  el.innerHTML = Object.keys(labels).map(k => {
+    const v = Math.max(0, Math.min(1, Number(obj?.[k] ?? 0)));
+    return `<div class="bar"><span>${labels[k]}</span><div class="track"><div class="fill" style="width:${v*100}%;background:${colorFn(k, v)}"></div></div><span class="num">${(v*100).toFixed(0)}%</span></div>`;
+  }).join("");
+}
+const PROB_L = {normal:"Normal", leak:"Gas leak", fire:"Fire"};
+const PROB_C = {normal:"var(--green)", leak:"var(--yellow)", fire:"var(--red)"};
+const WHY_L = {gas_delta:"Gas rise", gas_slope:"Gas speed", temp_slope:"Heat speed", light_delta:"Light change", flicker:"Flicker"};
+
+// ---------- camera
+let camBusy = false;
+function refreshCam(cv) {
+  const fresh = cv && cv.fresh && cv.has_jpg;
+  $("cam").style.display = fresh ? "block" : "none";
+  $("camNone").style.display = fresh ? "none" : "grid";
+  $("camNone").textContent = cv && cv.t ? `Camera offline (last ${cv.age}s ago)` : "Camera not connected";
+  $("cvScore").textContent = cv && cv.fresh ? num(cv.score, 2) : "–";
+  $("cvFlame").innerHTML = cv && cv.fresh ? (cv.flame ? '<span class="r">YES</span>' : '<span class="g">no</span>') : "–";
+  $("cvFps").textContent = cv && cv.fresh ? `${num(cv.fps,1)} fps` : "";
+  if (fresh && !camBusy) {
+    camBusy = true;
+    const img = new Image();
+    img.onload = () => { $("cam").src = img.src; camBusy = false; };
+    img.onerror = () => { camBusy = false; };
+    img.src = "/cv.jpg?t=" + Date.now();
+  }
+}
+
+// ---------- events
+function evClass(t) {
+  if (/REJECTED|DENIED|ALARM|OFFLINE|FAULT|TAMPER$|FAILED/.test(t)) return "r";
+  if (/WARNING|SILENCED|VALVE CLOSED|LATCHED/.test(t)) return "y";
+  if (/NORMAL|ONLINE|OK|ACK|LOGIN$|VALVE OPEN|UNLATCHED/.test(t)) return "g";
+  return "b";
+}
+
+// ---------- main render
+function render(s) {
+  const r = s.reading, online = s.online && r;
+  $("sim").style.display = r && r.sim ? "block" : "none";
+
+  const ban = $("banner");
+  if (!online) {
+    ban.className = "OFFLINE";
+    $("stTxt").textContent = r ? "BOARD OFFLINE" : "WAITING";
+    $("causeTxt").textContent = r ? `No data for ${s.age}s. The board keeps protecting the room alone (valve closes).` : "No data from the board yet";
+    $("confTxt").style.display = "none";
+  } else {
+    ban.className = r.state;
+    $("stTxt").textContent = r.state;
+    const causes = {gas_leak:"GAS LEAK", fire:"FIRE", none:"All clear"};
+    let c = causes[r.cause] || r.cause;
+    if (r.latched) c += " · latched until authorized reset";
+    $("causeTxt").textContent = c;
+    const conf = r.cause === "fire" && r.level > 0 && s.cv.fresh && s.cv.score >= 0.6;
+    $("confTxt").style.display = conf ? "inline-block" : "none";
+  }
+  voiceFor(!!online, r || {});
+
+  if (r) {
+    const raw = r.raw || {}, f = r.feat || {};
+    $("vGas").textContent = num(raw.gas);
+    $("vTemp").textContent = num(raw.temp, 1);
+    $("vHum").textContent = num(raw.hum, 0);
+    $("vLdr").textContent = num(raw.ldr);
+    $("vFlk").textContent = num(f.flicker, 1);
+    bars($("probs"), r.probs, PROB_L, k => PROB_C[k]);
+    const cls = r.cause === "gas_leak" ? "gas leak" : "fire";
+    $("whyTitle").textContent = `Why (what pushes towards ${cls})`;
+    bars($("why"), r.why, WHY_L, () => "var(--orange)");
+  }
+
+  refreshCam(s.cv);
+
+  // chips
+  const ch = [];
+  if (r) {
+    ch.push(online ? '<span class="chip ok">● Board online</span>' : '<span class="chip bad">● Board offline</span>');
+    (r.faults || []).forEach(f => ch.push(`<span class="chip bad">SENSOR FAULT ${esc(f).toUpperCase()}</span>`));
+    if (!(r.faults || []).length) ch.push('<span class="chip ok">Sensors OK</span>');
+    if (r.tamper) ch.push('<span class="chip bad">DETECTOR COVERED</span>');
+    ch.push(r.valve === "closed" ? '<span class="chip warn">Gas valve CLOSED</span>' : '<span class="chip ok">Gas valve open</span>');
+    if (r.silenced) ch.push('<span class="chip warn">Silenced</span>');
+    if (r.latched) ch.push('<span class="chip bad">Latched</span>');
+    ch.push(r.mode === "model" ? '<span class="chip info">Mode: AI model</span>' : '<span class="chip warn">Mode: fallback rules</span>');
+    ch.push(r.link_ok ? '<span class="chip ok">Signed link OK</span>' : '<span class="chip warn">Link degraded</span>');
+    ch.push(`<span class="chip info">seq ${r.seq} · last cmd ${r.last_cmd || 0}</span>`);
+    if (s.pending.length) ch.push(`<span class="chip warn">${s.pending.length} command(s) waiting for board</span>`);
+  } else ch.push('<span class="chip">No board yet</span>');
+  $("chips").innerHTML = ch.join("");
+
+  // comparison
+  const c = s.compare;
+  if (c) {
+    $("cmpRule").innerHTML = c.rule_alarm ? `<b class="y">WOULD ALARM (${esc(c.rule_reasons.join(", "))})</b>` : '<b class="n">ok</b>';
+    $("cmpHeat").innerHTML = c.heat_alarm ? '<b class="y">ALARM</b>' : `<b class="n">SILENT (${num(c.temp,1)} °C)</b>`;
+    $("cmpEmber").innerHTML = c.alert_t ? `<b class="y">${esc(r.state)} at ${fmt(c.alert_t)}</b>` : '<b class="n">NORMAL</b>';
+  }
+
+  $("events").innerHTML = s.events.map(e =>
+    `<tr><td class="t">${fmt(e.t)}</td><td class="ty ${evClass(e.type)}">${esc(e.type)}</td><td>${esc(e.detail)}</td></tr>`).join("");
+}
+
+async function poll() {
+  try {
+    const r = await fetch("/api/state", {cache:"no-store"});
+    if (r.status === 401) { location.href = "/login"; return; }
+    render(await r.json());
+  } catch (e) {
+    $("banner").className = "OFFLINE";
+    $("stTxt").textContent = "SERVER UNREACHABLE";
+    $("causeTxt").textContent = "The dashboard lost the server. The board keeps working alone.";
+  }
+}
+poll();
+setInterval(poll, 500);
+</script>
+</body>
+</html>

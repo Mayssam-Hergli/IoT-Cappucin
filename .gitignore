@@ -1,0 +1,11 @@
+# secrets (copy the *.example files)
+ember_secrets.py
+ember_esp32/secrets.h
+link_test/secrets.h
+# runtime data
+events.csv
+readings.csv
+__pycache__/
+*.pyc
+# separate clone of this repo, not part of the project
+a-connection/
