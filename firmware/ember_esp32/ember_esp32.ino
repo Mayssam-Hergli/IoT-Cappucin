@@ -43,7 +43,11 @@ float FLICKER_TH    = 20.0f;   // LDR std (only with HAS_LDR)
 
 #if USE_LINK
 #include "secrets.h"           // WIFI_PASS + EMBER_KEY (git-ignored: copy secrets.example.h -> secrets.h)
+#ifdef WIFI_SSID_OVERRIDE                 // secrets.h may set the real hotspot name
+const char* WIFI_SSID = WIFI_SSID_OVERRIDE;
+#else
 const char* WIFI_SSID = "EMBER-NET";
+#endif
 const char* SERVER_IP = "172.20.10.3";
 const bool  USE_TLS   = true;  // https://SERVER_IP:5443
 #include "ember_link.h"
@@ -424,12 +428,14 @@ void tick() {
     if (gasGood) { gasBaseSum += gasTick;
       if (++gasBaseN >= BASE_TICKS) { gasBase = gasBaseSum / BASE_TICKS; gasBaseReady = true;
         Serial.printf("# EVT baseline gas=%.1f\n", gasBase); } }
-  } else if (level == NORMAL && gasGood) gasBase += BASE_ALPHA * (gasTick - gasBase);
+  } else if (level == NORMAL && gasGood && fabsf(gasTick - gasBase) < GAS_LEAK_TH / 2)   // never learn a leak
+    gasBase += BASE_ALPHA * (gasTick - gasBase);
   // ldr baseline: first 40 ticks
   if (tickN <= BASE_TICKS) {
     ldrBaseSum += ldrMeanTick;
     if (tickN == BASE_TICKS) ldrBase = ldrBaseSum / BASE_TICKS;
-  } else if (level == NORMAL && !fLdr) ldrBase += BASE_ALPHA * (ldrMeanTick - ldrBase);
+  } else if (level == NORMAL && !fLdr && fabsf(ldrMeanTick - ldrBase) < 200)          // never learn a torch
+    ldrBase += BASE_ALPHA * (ldrMeanTick - ldrBase);
   featReady = tickN >= BASE_TICKS && tickN >= WIN;
 
   computeFeatures();
@@ -480,10 +486,10 @@ void tick() {
   } else if (tickN % 4 == 0) {
     Serial.printf("# warming up %lu/%d gas=%d temp=%.1f\n", (unsigned long)tickN, BASE_TICKS, gasTick, tempHeld);
   }
-  Serial.printf("ST,%s,%s,pn=%.2f,pl=%.2f,pf=%.2f,%s,flt=%s%s%s,tamper=%d,sil=%d,valve=%s,link=%d\n",
+  Serial.printf("ST,%s,%s,pn=%.2f,pl=%.2f,pf=%.2f,%s,flt=%s%s%s,tamper=%d,sil=%d,valve=%s,link_ok=%d,last_cmd=%ld\n",
     LEVEL_TXT[level], CAUSE_TXT[cause], pNormal, pLeak, pFire, modeModel ? "model" : "rules",
     fGas ? "gas;" : "", fDht ? "dht;" : "", fLdr ? "ldr;" : "", tamper, silenced(),
-    valveClosed ? "closed" : "open", !linkLost);
+    valveClosed ? "closed" : "open", (int)(linkWasOk && !linkLost), (long)lastCmd);
 }
 
 // ---------------- setup / loop ----------------
