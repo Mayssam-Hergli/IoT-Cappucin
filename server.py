@@ -22,7 +22,9 @@ app.config.update(SESSION_COOKIE_SAMESITE="Strict", SESSION_COOKIE_HTTPONLY=True
 
 USERS = {u: {"hash": generate_password_hash(v["password"]), "role": v["role"]}
          for u, v in config.USERS.items()}
-VALID_CMDS = {"reset", "silence", "valve_open", "valve_close"}
+VALID_CMDS = {"reset", "silence", "valve_open", "valve_close",
+              # simulated sensors (no DHT / LDR fitted): the board fakes these channels on request
+              "sim_heat", "sim_flame", "sim_hand", "sim_torch", "sim_calm", "sim_dht_fault"}
 ONLINE_S = 3.0
 CV_FRESH_S = 2.0
 HERE = os.path.dirname(os.path.abspath(__file__))

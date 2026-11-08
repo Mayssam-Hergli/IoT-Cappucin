@@ -95,10 +95,10 @@
     <h2>Live sensors</h2>
     <div class="vals">
       <div class="val"><div class="k">Gas</div><div class="v" id="vGas">–</div></div>
-      <div class="val"><div class="k">Temperature</div><div class="v"><span id="vTemp">–</span><span class="u"> °C</span></div></div>
-      <div class="val"><div class="k">Humidity</div><div class="v"><span id="vHum">–</span><span class="u"> %</span></div></div>
-      <div class="val"><div class="k">Light</div><div class="v" id="vLdr">–</div></div>
-      <div class="val"><div class="k">Flicker</div><div class="v" id="vFlk">–</div></div>
+      <div class="val"><div class="k" id="kTemp">Temperature</div><div class="v"><span id="vTemp">–</span><span class="u"> °C</span></div></div>
+      <div class="val"><div class="k" id="kHum">Humidity</div><div class="v"><span id="vHum">–</span><span class="u"> %</span></div></div>
+      <div class="val"><div class="k" id="kLdr">Light</div><div class="v" id="vLdr">–</div></div>
+      <div class="val"><div class="k" id="kFlk">Flicker</div><div class="v" id="vFlk">–</div></div>
     </div>
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:18px; margin-top:14px">
       <div>
@@ -133,7 +133,7 @@
     </div>
   </section>
 
-  <section class="card c4">
+  <section class="card c6">
     <h2>Commands {% if role != 'admin' %}<span class="r">(view only)</span>{% endif %}</h2>
     <div class="cmds">
       <button data-cmd="reset">⟲ Reset alarm</button>
@@ -144,7 +144,19 @@
     <div id="cmdMsg"></div>
   </section>
 
-  <section class="card c8">
+  <section class="card c6">
+    <h2>Simulated sensors <span class="y">(no DHT / LDR fitted)</span></h2>
+    <div class="cmds">
+      <button data-cmd="sim_heat">🔥 Heat rise</button>
+      <button data-cmd="sim_flame">🕯 Flame flicker</button>
+      <button data-cmd="sim_hand">✋ Warm hand (trap)</button>
+      <button data-cmd="sim_torch">🔦 Torch (trap)</button>
+      <button data-cmd="sim_dht_fault">⚡ Unplug DHT</button>
+      <button data-cmd="sim_calm">✓ Calm</button>
+    </div>
+  </section>
+
+  <section class="card c12">
     <h2>Event log (audit trail)</h2>
     <div class="evwrap"><table><tbody id="events"></tbody></table></div>
   </section>
@@ -263,6 +275,11 @@ function render(s) {
     $("vHum").textContent = num(raw.hum, 0);
     $("vLdr").textContent = num(raw.ldr);
     $("vFlk").textContent = num(f.flicker, 1);
+    const ss = r.sim_sensors || [];
+    $("kTemp").textContent = ss.includes("dht") ? "Temperature (SIM)" : "Temperature";
+    $("kHum").textContent = ss.includes("dht") ? "Humidity (SIM)" : "Humidity";
+    $("kLdr").textContent = ss.includes("ldr") ? "Light (SIM)" : "Light";
+    $("kFlk").textContent = ss.includes("ldr") ? "Flicker (SIM)" : "Flicker";
     bars($("probs"), r.probs, PROB_L, k => PROB_C[k]);
     const cls = r.cause === "gas_leak" ? "gas leak" : "fire";
     $("whyTitle").textContent = `Why (what pushes towards ${cls})`;
@@ -282,6 +299,7 @@ function render(s) {
     if (r.silenced) ch.push('<span class="chip warn">Silenced</span>');
     if (r.latched) ch.push('<span class="chip bad">Latched</span>');
     ch.push(r.mode === "model" ? '<span class="chip info">Mode: AI model</span>' : '<span class="chip warn">Mode: fallback rules</span>');
+    if ((r.sim_sensors || []).length) ch.push(`<span class="chip warn">SIMULATED: ${esc(r.sim_sensors.join(", ")).toUpperCase()}${r.sim_scene && r.sim_scene !== "calm" ? " · " + esc(r.sim_scene) : ""}</span>`);
     ch.push(r.link_ok ? '<span class="chip ok">Signed link OK</span>' : '<span class="chip warn">Link degraded</span>');
     ch.push(`<span class="chip info">seq ${r.seq} · last cmd ${r.last_cmd || 0}</span>`);
     if (s.pending.length) ch.push(`<span class="chip warn">${s.pending.length} command(s) waiting for board</span>`);

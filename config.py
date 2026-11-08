@@ -17,6 +17,6 @@ USERS = {
 
 # Simple threshold rule (comparison box). Update with Mayssam's baseline thresholds.
 RULE_GAS_DELTA = 300.0      # gas raw rise over baseline
-RULE_TEMP_SLOPE = 0.5       # degC per second
+RULE_TEMP_SLOPE = 0.2       # degC per second (a warm hand on the DHT11 gives ~0.22 -> rule would alarm)
 RULE_LIGHT_DELTA = 800.0    # abs change in LDR reading
 HEAT_DETECTOR_C = 57.0      # classic fixed-temperature heat detector

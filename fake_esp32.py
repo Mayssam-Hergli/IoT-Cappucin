@@ -148,6 +148,13 @@ class Board:
             self.valve = "open"
         elif cmd == "valve_close":
             self.valve = "closed"
+        elif cmd.startswith("sim_"):            # dashboard "simulated sensors" buttons
+            scen = {"sim_heat": "fire", "sim_flame": "fire", "sim_hand": "trap",
+                    "sim_torch": "trap", "sim_calm": "normal"}.get(cmd)
+            if scen:
+                self.scenario, self.scen_t = scen, time.time()
+            elif cmd == "sim_dht_fault":
+                self.dht_fault = not self.dht_fault
         self.last_cmd = cid
 
 board = Board()
