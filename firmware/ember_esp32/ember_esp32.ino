@@ -11,10 +11,12 @@
 #include "model.h"
 
 // ---------------- build switches ----------------
-#define USE_LINK        0     // 1 when Israa's ember_link.h + secrets.h are in this folder
-#define HAS_LDR         0     // LDR not fitted -> light_delta = flicker = 0
-#define HAS_IR          0     // IR obstacle = anti-masking (tamper). Removed for now.
-#define HAS_DHT         0     // DHT11 not fitted for now -> temp_slope = 0, no "dht" fault
+#define USE_LINK        1     // needs ember_link.h + secrets.h (WIFI_PASS, EMBER_KEY) in this folder
+#define HAS_DHT         1     // enable the temperature code path...
+#define HAS_LDR         1     // ...and the light code path...
+#define SIM_DHT         1     // ...but feed them from the simulator (no DHT/LDR fitted; jury-approved)
+#define SIM_LDR         1
+#define HAS_IR          0     // IR obstacle = anti-masking (tamper). Not used for now.
 #define BUZZER_PASSIVE  0     // hw_test: sounds on tone AND on DC -> ACTIVE buzzer
 #define FORCE_RULES     0     // 1 = ignore model.h and use the fallback rules
 #define SERIAL_CMDS     1     // dev only: type reset/silence/valve_open/valve_close on Serial. Set 0 for the demo.
@@ -40,9 +42,38 @@ float FLICKER_TH    = 20.0f;   // LDR std (only with HAS_LDR)
 #define BUZ_CH      6          // LEDC channel 6 -> timer 3; servo gets timer 0
 
 #if USE_LINK
-#include "secrets.h"           // WIFI_SSID, WIFI_PASS, SERVER_IP, EMBER_KEY, USE_TLS
+#include "secrets.h"           // WIFI_PASS + EMBER_KEY (git-ignored: copy secrets.example.h -> secrets.h)
+const char* WIFI_SSID = "EMBER-NET";
+const char* SERVER_IP = "172.20.10.3";
+const bool  USE_TLS   = true;  // https://SERVER_IP:5443
 #include "ember_link.h"
 #endif
+
+// ---------------- simulator for the missing DHT + LDR (values flow through the real code paths) ----------------
+enum SimScene { SIM_CALM, SIM_HEAT, SIM_FLAME, SIM_HAND, SIM_TORCH };
+const char* SIM_NAME[] = {"calm", "heat", "flame", "hand", "torch"};
+SimScene simScene = SIM_CALM;
+bool  simDhtFault = false;
+float simTemp = 24.0f;
+
+// Called at each DHT read (every 2 s). DHT11-like: whole degrees.
+float simReadTemp() {
+  if (simDhtFault) return NAN;                       // "unplugged" -> real fault path (3 NaN in a row)
+  float target = 24.0f, rate = 0.3f;                 // degC/s towards target (cooling back)
+  if (simScene == SIM_HEAT || simScene == SIM_FLAME) { target = 60.0f; rate = 1.2f; }  // fire: fast rise
+  else if (simScene == SIM_HAND)                     { target = 27.0f; rate = 0.15f; } // trap: slow, small
+  float step = rate * 2.0f;
+  simTemp = (simTemp < target) ? fminf(target, simTemp + step) : fmaxf(target, simTemp - step);
+  return roundf(simTemp);
+}
+float simReadHum() { return simDhtFault ? NAN : 45.0f; }
+
+// Called at each fast LDR sample (every 20 ms).
+int simReadLdr() {
+  if (simScene == SIM_TORCH) return 3600 + random(-10, 11);    // trap: very bright, steady (low flicker)
+  if (simScene == SIM_FLAME) return 1700 + random(-120, 121);  // flame: flicker std ~70 (> FLICKER_TH)
+  return 2000 + random(-8, 9);                                 // calm room
+}
 
 // ---------------- constants ----------------
 #define TICK_MS      500
@@ -171,6 +202,12 @@ void execCmd(const String& c) {
   else if (c == "silence") { silencedUntil = millis() + SILENCE_MS; Serial.println("# EVT silenced 60 s (cmd)"); }
   else if (c == "valve_open") setValve(false, "cmd");
   else if (c == "valve_close") setValve(true, "cmd");
+  else if (c == "sim_heat")      simScene = SIM_HEAT;
+  else if (c == "sim_flame")     simScene = SIM_FLAME;
+  else if (c == "sim_hand")      simScene = SIM_HAND;
+  else if (c == "sim_torch")     simScene = SIM_TORCH;
+  else if (c == "sim_calm")      { simScene = SIM_CALM; simDhtFault = false; }
+  else if (c == "sim_dht_fault") simDhtFault = !simDhtFault;
   else Serial.printf("# EVT unknown cmd '%s'\n", c.c_str());
 }
 
@@ -201,21 +238,24 @@ void rules() {
   fire = tempOk && feat[F_TEMP_SLOPE] > TEMP_SLOPE_TH;   // no LDR: fast heat rise only
 #endif
   leak = gasOk && feat[F_GAS_DELTA] > GAS_LEAK_TH;
+  bool heat = tempOk && feat[F_TEMP_SLOPE] > TEMP_SLOPE_TH;   // heat alone (no flicker) -> WARNING fire
   if (fire)      { pNormal = 0.05f; pLeak = 0.05f; pFireSensor = 0.90f; }
   else if (leak) { pNormal = 0.05f; pLeak = 0.90f; pFireSensor = 0.05f; }
+  else if (heat) { pNormal = 0.50f; pLeak = 0.05f; pFireSensor = 0.45f; }   // camera flame can push it to ALARM
   else           { pNormal = 0.98f; pLeak = 0.01f; pFireSensor = 0.01f; }
 }
 
 // ---------------- sampling ----------------
 void sampleLdrFast() {
 #if HAS_LDR
-  int v = analogRead(PIN_LDR); ldrRaw = v;
+  int v = SIM_LDR ? simReadLdr() : analogRead(PIN_LDR); ldrRaw = v;
   ldrSum += v; ldrSum2 += (float)v * v; ldrN++;
 #endif
 }
 
 void readDht() {
-  float t = dht.readTemperature(), h = dht.readHumidity();
+  float t = SIM_DHT ? simReadTemp() : dht.readTemperature();
+  float h = SIM_DHT ? simReadHum()  : dht.readHumidity();
   if (isnan(t) || isnan(h)) {
     if (++dhtNan >= 3 && !fDht) { fDht = true; Serial.println("# EVT FAULT dht"); }
     if (dhtNan >= 1) dhtNeedRefill = true;   // after a gap, restart the temp window (no fake slope)
@@ -354,6 +394,10 @@ String buildPayload() {
   JsonArray fa = d["faults"].to<JsonArray>();
   if (fGas) fa.add("gas"); if (fDht) fa.add("dht"); if (fLdr) fa.add("ldr");
   d["tamper"] = tamper; d["link_ok"] = !linkLost && linkWasOk; d["last_cmd"] = lastCmd;
+  JsonArray ss = d["sim_sensors"].to<JsonArray>();      // board is real ("sim": false); these channels are simulated
+  if (SIM_DHT) ss.add("dht");
+  if (SIM_LDR) ss.add("ldr");
+  d["sim_scene"] = SIM_NAME[simScene];
   String s; serializeJson(d, s); return s;
 }
 
@@ -462,7 +506,7 @@ void setup() {
   analogRead(PIN_GAS);
   rtc_gpio_pullup_dis(GPIO_NUM_33);
   rtc_gpio_pulldown_en(GPIO_NUM_33);
-#if HAS_LDR
+#if HAS_LDR && !SIM_LDR
   analogRead(PIN_LDR);
   rtc_gpio_pullup_dis(GPIO_NUM_32);
   rtc_gpio_pulldown_en(GPIO_NUM_32);
@@ -470,7 +514,7 @@ void setup() {
   ESP32PWM::allocateTimer(0);
   valveServo.setPeriodHertz(50);
   buzInit();
-  dht.begin();
+  if (!SIM_DHT) dht.begin();
   // valve assumed open at boot (no move: avoids a current spike on USB power)
 #if USE_LINK
   linkBegin(WIFI_SSID, WIFI_PASS, SERVER_IP, USE_TLS ? 5443 : 5000, USE_TLS, EMBER_KEY);
