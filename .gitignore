@@ -9,3 +9,7 @@ __pycache__/
 *.pyc
 # separate clone of this repo, not part of the project
 a-connection/
+# local environments, editor lock files, model-training leftovers
+.venv/
+.~lock.*#
+*.joblib
